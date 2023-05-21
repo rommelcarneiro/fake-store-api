@@ -16,7 +16,20 @@ const productSchema = new schema({
     },
     description:String,
     image:String,
-    category:String
+    category:String,
+    brandName: String,
+    season: String,
+    usage: String,
+    gender: String,
+    articleNumber: String,
+    baseColour: String,
+    displayCategories: String,
+    year: String,
+    articleType: String, 
+    rating:{
+        rate:Number,
+        count:Number
+    }
 })
 
 module.exports = mongoose.model('product',productSchema)

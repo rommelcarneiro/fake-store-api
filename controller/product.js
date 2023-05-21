@@ -1,17 +1,40 @@
+const product = require('../model/product');
 const Product = require('../model/product');
 
-module.exports.getAllProducts = (req, res) => {
-	const limit = Number(req.query.limit) || 0;
+// module.exports.getAllProducts = (req, res) => {
+// 	const limit = Number(req.query.limit) || 0;
+// 	const sort = req.query.sort == 'desc' ? -1 : 1;
+
+// 	Product.find()
+// 		.select(['-_id'])
+// 		.limit(limit)
+// 		.sort({ id: sort })
+// 		.then((products) => {
+// 			res.json(products);
+// 		})
+// 		.catch((err) => res.json ({ message: `Erro ao obter products: ${err.message}`}));
+// };
+
+module.exports.getAllProducts = async (req, res, next) => {
+	const total_results = await Product.countDocuments(); 
 	const sort = req.query.sort == 'desc' ? -1 : 1;
 
 	Product.find()
 		.select(['-_id'])
-		.limit(limit)
+		.skip(req.pagination.skip) 
+		.limit(req.pagination.limit) 
 		.sort({ id: sort })
 		.then((products) => {
-			res.json(products);
+			const total_pages = Math.ceil(total_results / req.pagination.page_items); 
+			res.json({
+			current_page: req.pagination.page,
+			total_pages: total_pages,
+			total_results: total_results,
+			products: products
+			});
 		})
-		.catch((err) => console.log(err));
+		.catch((err) => res.json ({ message: `Erro ao obter produtos: ${err.message}`}));
+
 };
 
 module.exports.getProduct = (req, res) => {
@@ -24,7 +47,7 @@ module.exports.getProduct = (req, res) => {
 		.then((product) => {
 			res.json(product);
 		})
-		.catch((err) => console.log(err));
+		.catch((err) => res.json ({ message: `Erro ao obter produto: ${err.message}`}));
 };
 
 module.exports.getProductCategories = (req, res) => {
@@ -32,24 +55,51 @@ module.exports.getProductCategories = (req, res) => {
 		.then((categories) => {
 			res.json(categories);
 		})
-		.catch((err) => console.log(err));
+		.catch((err) => res.json ({ message: `Erro ao obter categorias: ${err.message}`}));
 };
 
 module.exports.getProductsInCategory = (req, res) => {
 	const category = req.params.category;
-	const limit = Number(req.query.limit) || 0;
 	const sort = req.query.sort == 'desc' ? -1 : 1;
 
 	Product.find({
 		category,
 	})
 		.select(['-_id'])
-		.limit(limit)
+		.skip(req.pagination.skip) 
+		.limit(req.pagination.limit)
+		.sort({ id: sort })
+		.then(async (products) => {
+			const total_results = await Product.countDocuments({ category });
+			const total_pages = Math.ceil(total_results / req.pagination.page_items); 
+			res.json({
+				current_page: req.pagination.page,
+				total_pages: total_pages,
+				total_results: total_results, 
+				products 
+			});
+		})
+		.catch((err) => res.json ({ message: `Erro ao obter produtos de categoria: ${err.message}`}));
+};
+
+// middleware to search and return products based on path param query to product title
+module.exports.getSearchProducts = (req, res) => {
+	const query = req.query.query;
+	
+	const sort = req.query.sort == 'desc' ? -1 : 1;
+	Product.find({
+		title: {
+			$regex: query,
+			$options: 'i',
+		},
+	})
+		.select(['-_id'])
+		.limit(req.pagination.limit)
 		.sort({ id: sort })
 		.then((products) => {
 			res.json(products);
 		})
-		.catch((err) => console.log(err));
+		.catch((err) => res.json ({ message: `Erro ao realizar pesquisa de produtos: ${err.message}`}));
 };
 
 module.exports.addProduct = (req, res) => {
@@ -113,6 +163,6 @@ module.exports.deleteProduct = (req, res) => {
 			.then((product) => {
 				res.json(product);
 			})
-			.catch((err) => console.log(err));
+			.catch((err) => res.json ({ message: `Erro ao exlcuir produto: ${err.message}`}));
 	}
 };
